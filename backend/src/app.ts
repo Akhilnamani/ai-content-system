@@ -1,7 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes';
-
+import contentRoutes from './routes/content.routes';
 const app: Express = express();
 
 // Middleware
@@ -20,7 +20,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
-
+app.use('/api/v1/content', contentRoutes); 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
   console.log('✅ Health check called');

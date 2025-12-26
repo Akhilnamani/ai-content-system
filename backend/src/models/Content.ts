@@ -1,72 +1,52 @@
 import mongoose from 'mongoose';
 
 interface IContent {
+  userId: mongoose.Types.ObjectId;
   title: string;
+  topic: string;
+  contentType: 'blog' | 'social' | 'email' | 'ad';
+  tone: 'professional' | 'casual' | 'creative' | 'technical';
   content: string;
-  originalPrompt: string;
-  status: 'draft' | 'pending' | 'approved' | 'published';
-  tone: string;
-  language: string;
-  tags: string[];
-  created_by: mongoose.Types.ObjectId;
-  workspace_id?: mongoose.Types.ObjectId;
-  metadata: {
-    readabilityScore?: number;
-    wordCount: number;
-    estimatedReadTime: number;
-  };
-  verification_status?: 'verified' | 'uncertain' | 'false';
+  generatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const contentSchema = new mongoose.Schema<IContent>(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     title: {
       type: String,
       required: true,
+    },
+    topic: {
+      type: String,
+      required: true,
+    },
+    contentType: {
+      type: String,
+      enum: ['blog', 'social', 'email', 'ad'],
+      default: 'blog',
+    },
+    tone: {
+      type: String,
+      enum: ['professional', 'casual', 'creative', 'technical'],
+      default: 'professional',
     },
     content: {
       type: String,
       required: true,
     },
-    originalPrompt: {
-      type: String,
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ['draft', 'pending', 'approved', 'published'],
-      default: 'draft',
-    },
-    tone: {
-      type: String,
-      required: true,
-    },
-    language: {
-      type: String,
-      default: 'en',
-    },
-    tags: [String],
-    created_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    metadata: {
-      readabilityScore: Number,
-      wordCount: Number,
-      estimatedReadTime: Number,
-    },
-    verification_status: {
-      type: String,
-      enum: ['verified', 'uncertain', 'false'],
+    generatedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
 );
-
-// Index for searching
-contentSchema.index({ title: 'text', content: 'text', tags: 1 });
 
 export const Content = mongoose.model<IContent>('Content', contentSchema);

@@ -11,6 +11,10 @@ export const Dashboard: React.FC = () => {
     navigate('/login');
   };
 
+  const handleGenerateClick = () => {
+    navigate('/generate');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
@@ -30,14 +34,19 @@ export const Dashboard: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">Welcome, {user?.firstName}!</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            {/* Generate Content */}
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
               <h3 className="text-lg font-semibold">Generate Content</h3>
               <p className="text-sm mt-2 opacity-90">Create AI-powered content variants</p>
-              <button className="mt-4 bg-white text-blue-600 px-4 py-2 rounded font-semibold hover:bg-gray-100 transition">
+              <button
+                onClick={handleGenerateClick}
+                className="mt-4 bg-white text-blue-600 px-4 py-2 rounded font-semibold hover:bg-gray-100 transition"
+              >
                 Get Started
               </button>
             </div>
 
+            {/* Search Content (to be implemented later) */}
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
               <h3 className="text-lg font-semibold">Search Content</h3>
               <p className="text-sm mt-2 opacity-90">Find existing content with semantic search</p>
@@ -46,6 +55,7 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
 
+            {/* Analytics (to be implemented later) */}
             <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg p-6 text-white">
               <h3 className="text-lg font-semibold">Analytics</h3>
               <p className="text-sm mt-2 opacity-90">View your content performance</p>
