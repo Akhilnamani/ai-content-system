@@ -142,15 +142,26 @@ export const ContentList: React.FC = () => {
 
                 <div className="flex justify-between items-center text-xs text-gray-500">
                   <span>{new Date(content.createdAt).toLocaleDateString()}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(content._id);
-                    }}
-                    className="text-red-600 hover:text-red-800 font-semibold"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/edit/${content._id}`);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 font-semibold"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(content._id);
+                      }}
+                      className="text-red-600 hover:text-red-800 font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))

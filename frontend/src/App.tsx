@@ -4,6 +4,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { ContentGenerator } from './pages/ContentGenerator';
 import { ContentList } from './pages/ContentList';
+import { EditContent } from './pages/EditContent';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -36,6 +37,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/edit/:id"
+          element={
+            <ProtectedRoute>
+              <EditContent />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

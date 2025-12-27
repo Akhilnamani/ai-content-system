@@ -129,6 +129,46 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Update content
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, content } = req.body;
+    const userId = (req as any).userId;
+
+    console.log('🔵 Update request:', { id, title });
+
+    if (!title || !content) {
+      res.status(400).json({ message: 'Title and content are required' });
+      return;
+    }
+
+    const updatedContent = await Content.findOneAndUpdate(
+      { _id: id, userId },
+      { title, content },
+      { new: true }
+    );
+
+    if (!updatedContent) {
+      res.status(404).json({ message: 'Content not found' });
+      return;
+    }
+
+    console.log('✅ Content updated');
+
+    res.status(200).json({
+      message: 'Content updated successfully',
+      content: updatedContent,
+    });
+  } catch (error: any) {
+    console.error('❌ Update content error:', error.message);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message,
+    });
+  }
+});
+
 // Delete content
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
