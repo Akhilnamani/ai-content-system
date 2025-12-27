@@ -3,6 +3,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { ContentGenerator } from './pages/ContentGenerator';
+import { ContentList } from './pages/ContentList';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -24,6 +25,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ContentGenerator />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/content-list"
+          element={
+            <ProtectedRoute>
+              <ContentList />
             </ProtectedRoute>
           }
         />

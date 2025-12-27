@@ -15,6 +15,10 @@ export const Dashboard: React.FC = () => {
     navigate('/generate');
   };
 
+  const handleViewContent = () => {
+    navigate('/content-list');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
@@ -46,16 +50,19 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Search Content (to be implemented later) */}
+            {/* View Content */}
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
-              <h3 className="text-lg font-semibold">Search Content</h3>
-              <p className="text-sm mt-2 opacity-90">Find existing content with semantic search</p>
-              <button className="mt-4 bg-white text-purple-600 px-4 py-2 rounded font-semibold hover:bg-gray-100 transition">
-                Explore
+              <h3 className="text-lg font-semibold">Your Content</h3>
+              <p className="text-sm mt-2 opacity-90">View all generated content</p>
+              <button
+                onClick={handleViewContent}
+                className="mt-4 bg-white text-purple-600 px-4 py-2 rounded font-semibold hover:bg-gray-100 transition"
+              >
+                View All
               </button>
             </div>
 
-            {/* Analytics (to be implemented later) */}
+            {/* Analytics */}
             <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg p-6 text-white">
               <h3 className="text-lg font-semibold">Analytics</h3>
               <p className="text-sm mt-2 opacity-90">View your content performance</p>
