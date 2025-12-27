@@ -133,12 +133,20 @@ export const ContentList: React.FC = () => {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Your Content</h1>
-          <button
-            onClick={() => navigate('/generate')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            + Generate New
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate('/analytics')}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            >
+              📊 Analytics
+            </button>
+            <button
+              onClick={() => navigate('/generate')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              + Generate New
+            </button>
+          </div>
         </div>
       </header>
 
