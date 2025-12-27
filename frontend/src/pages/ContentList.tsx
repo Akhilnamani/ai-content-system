@@ -54,6 +54,63 @@ export const ContentList: React.FC = () => {
     }
   };
 
+  const exportToPDF = async (content: Content) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const { default: html2canvas } = await import('html2canvas');
+
+      // Create a hidden div for rendering
+      const element = document.createElement('div');
+      element.style.position = 'absolute';
+      element.style.left = '-9999px';
+      element.style.padding = '20px';
+      element.style.backgroundColor = 'white';
+      element.style.width = '800px';
+
+      element.innerHTML = `
+        <h1 style="font-size: 28px; margin-bottom: 10px;">${content.title}</h1>
+        <p style="color: #666; margin-bottom: 20px;"><strong>Topic:</strong> ${content.topic} | <strong>Type:</strong> ${content.contentType} | <strong>Tone:</strong> ${content.tone}</p>
+        <hr style="margin: 20px 0;">
+        <div style="font-size: 14px; line-height: 1.6; color: #333; white-space: pre-wrap;">${content.content}</div>
+        <hr style="margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">Generated: ${new Date(content.createdAt).toLocaleString()}</p>
+      `;
+
+      document.body.appendChild(element);
+
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      const imgWidth = 210 - 20; // A4 width - margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 10;
+
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= 297 - 20; // A4 height - margins
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      pdf.save(`${content.title}.pdf`);
+      alert('PDF exported successfully!');
+      console.log('✅ PDF exported:', content.title);
+    } catch (error) {
+      console.error('❌ Error exporting PDF:', error);
+      alert('Failed to export PDF');
+    } finally {
+      const element = document.querySelector('div[style*="left: -9999px"]');
+      if (element) {
+        document.body.removeChild(element);
+      }
+    }
+  };
+
   const filteredContents = contents.filter((content) =>
     content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     content.topic.toLowerCase().includes(searchTerm.toLowerCase())
@@ -210,6 +267,14 @@ export const ContentList: React.FC = () => {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
               >
                 Copy to Clipboard
+              </button>
+              <button
+                onClick={() => {
+                  exportToPDF(selectedContent);
+                }}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                Export as PDF
               </button>
               <button
                 onClick={() => setSelectedContent(null)}
