@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { QualityBadge } from '../components/QualityBadge';
+import { QualityDetails } from '../components/QualityDetails';
+
+interface FlaggedClaim {
+  claim: string;
+  riskLevel: 'high' | 'medium' | 'low';
+  suggestion: string;
+  sources?: string[];
+}
+
+interface QualityDetailsType {
+  wordCount: number;
+  sentenceCount: number;
+  readabilityScore: number;
+  structureScore: number;
+  uniqueWordsRatio: number;
+}
 
 interface Content {
   _id: string;
@@ -10,6 +27,12 @@ interface Content {
   tone: string;
   content: string;
   createdAt: string;
+  aiModel?: string;
+  qualityScore?: number;
+  halluccinationRisk?: 'high' | 'medium' | 'low' | 'none';
+  flaggedClaims?: FlaggedClaim[];
+  factCheckStatus?: 'verified' | 'flagged' | 'needs-review';
+  qualityDetails?: QualityDetailsType;
 }
 
 export const EditContent: React.FC = () => {
@@ -102,6 +125,50 @@ export const EditContent: React.FC = () => {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow p-8">
+          {/* Quality Badge Section */}
+          {content.qualityScore !== undefined && (
+            <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">🎯 Content Quality Analysis</h2>
+              <QualityBadge
+                score={content.qualityScore}
+                halluccinationRisk={content.halluccinationRisk || 'none'}
+                flaggedClaimsCount={content.flaggedClaims?.length || 0}
+              />
+
+              {/* Fact-Check Status */}
+              {content.factCheckStatus && (
+                <div className="mt-4 p-3 bg-white rounded border border-blue-200">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Fact-Check Status:{' '}
+                    <span
+                      className={`inline-block px-2 py-1 rounded text-xs font-bold ml-2 ${
+                        content.factCheckStatus === 'verified'
+                          ? 'bg-green-100 text-green-800'
+                          : content.factCheckStatus === 'flagged'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {content.factCheckStatus === 'verified' && '✅ Verified'}
+                      {content.factCheckStatus === 'flagged' && '⚠️ Flagged'}
+                      {content.factCheckStatus === 'needs-review' && '🔍 Needs Review'}
+                    </span>
+                  </p>
+                  {content.flaggedClaims && content.flaggedClaims.length > 0 && (
+                    <p className="text-xs text-gray-600 mt-2">
+                      {content.flaggedClaims.length} claim(s) need verification
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quality Details Component */}
+          {content.qualityDetails && (
+            <QualityDetails details={content.qualityDetails} />
+          )}
+
           {/* Title */}
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -116,25 +183,31 @@ export const EditContent: React.FC = () => {
           </div>
 
           {/* Content Info */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <div>
               <p className="text-gray-600 text-sm">Topic</p>
-              <p className="font-semibold text-gray-900">{content.topic}</p>
+              <p className="font-semibold text-gray-900 text-sm truncate">{content.topic}</p>
             </div>
             <div>
               <p className="text-gray-600 text-sm">Type</p>
-              <p className="font-semibold text-gray-900">{content.contentType}</p>
+              <p className="font-semibold text-gray-900 text-sm truncate">{content.contentType}</p>
             </div>
             <div>
               <p className="text-gray-600 text-sm">Tone</p>
-              <p className="font-semibold text-gray-900">{content.tone}</p>
+              <p className="font-semibold text-gray-900 text-sm truncate">{content.tone}</p>
             </div>
             <div>
               <p className="text-gray-600 text-sm">Created</p>
-              <p className="font-semibold text-gray-900">
+              <p className="font-semibold text-gray-900 text-sm">
                 {new Date(content.createdAt).toLocaleDateString()}
               </p>
             </div>
+            {content.aiModel && (
+              <div>
+                <p className="text-gray-600 text-sm">AI Model</p>
+                <p className="font-semibold text-gray-900 text-sm truncate">🤖 {content.aiModel}</p>
+              </div>
+            )}
           </div>
 
           {/* Content Editor */}
@@ -150,15 +223,35 @@ export const EditContent: React.FC = () => {
             />
           </div>
 
-          {/* Word Count */}
-          <div className="mb-8 flex justify-between items-center">
-            <p className="text-gray-600">
-              Word count: <span className="font-semibold">{editedContent.split(/\s+/).filter(word => word).length}</span>
-            </p>
-            <p className="text-gray-600">
-              Characters: <span className="font-semibold">{editedContent.length}</span>
-            </p>
+          {/* Word Count & Stats */}
+          <div className="mb-8 grid grid-cols-3 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-gray-600 text-sm mb-1">Word Count</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {editedContent.split(/\s+/).filter(word => word).length}
+              </p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <p className="text-gray-600 text-sm mb-1">Characters</p>
+              <p className="text-2xl font-bold text-purple-600">{editedContent.length}</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <p className="text-gray-600 text-sm mb-1">Sentences</p>
+              <p className="text-2xl font-bold text-green-600">
+                {editedContent.split(/[.!?]+/).filter(s => s.trim().length > 0).length}
+              </p>
+            </div>
           </div>
+
+          {/* Warning for Quality Changes */}
+          {content.qualityScore !== undefined && (
+            <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+              <p className="text-sm text-yellow-800">
+                <span className="font-semibold">💡 Note:</span> Changes you make to the content won't automatically update the quality score. 
+                The quality metrics above reflect the original generated content.
+              </p>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-4">
@@ -167,7 +260,7 @@ export const EditContent: React.FC = () => {
               disabled={isSaving}
               className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-semibold"
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? 'Saving...' : '💾 Save Changes'}
             </button>
             <button
               onClick={() => navigate('/content-list')}

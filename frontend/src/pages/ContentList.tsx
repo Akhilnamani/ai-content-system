@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { QualityBadge } from '../components/QualityBadge';
+import { FactCheckModal } from '../components/FactCheckModal';
+import { exportQualityReportPDF } from '../services/qualityReportPDF';
+import { RegenerateModal } from '../components/RegenerateModal';
+
+interface FlaggedClaim {
+  claim: string;
+  riskLevel: 'high' | 'medium' | 'low';
+  suggestion: string;
+  sources?: string[];
+}
 
 interface Content {
   _id: string;
@@ -10,6 +21,18 @@ interface Content {
   tone: string;
   content: string;
   createdAt: string;
+  aiModel?: string;
+  qualityScore?: number;
+  halluccinationRisk?: 'high' | 'medium' | 'low' | 'none';
+  flaggedClaims?: FlaggedClaim[];
+  factCheckStatus?: 'verified' | 'flagged' | 'needs-review';
+  qualityDetails?: {
+    wordCount: number;
+    sentenceCount: number;
+    readabilityScore: number;
+    structureScore: number;
+    uniqueWordsRatio: number;
+  };
 }
 
 export const ContentList: React.FC = () => {
@@ -18,6 +41,8 @@ export const ContentList: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFactCheck, setShowFactCheck] = useState(false);
+  const [showRegenerate, setShowRegenerate] = useState(false);
 
   useEffect(() => {
     fetchContents();
@@ -70,10 +95,25 @@ export const ContentList: React.FC = () => {
       element.innerHTML = `
         <h1 style="font-size: 28px; margin-bottom: 10px;">${content.title}</h1>
         <p style="color: #666; margin-bottom: 20px;"><strong>Topic:</strong> ${content.topic} | <strong>Type:</strong> ${content.contentType} | <strong>Tone:</strong> ${content.tone}</p>
+        ${
+          content.qualityScore !== undefined
+            ? `
+        <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f9ff; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0; color: #1e40af; font-weight: bold;">📊 Quality Score: ${content.qualityScore}/100</p>
+          <p style="margin: 5px 0 0 0; color: #1e40af; font-size: 12px;">Risk Level: ${content.halluccinationRisk || 'none'}</p>
+          ${
+            content.factCheckStatus
+              ? `<p style="margin: 5px 0 0 0; color: #1e40af; font-size: 12px;">Fact-Check Status: ${content.factCheckStatus}</p>`
+              : ''
+          }
+        </div>
+        `
+            : ''
+        }
         <hr style="margin: 20px 0;">
         <div style="font-size: 14px; line-height: 1.6; color: #333; white-space: pre-wrap;">${content.content}</div>
         <hr style="margin: 20px 0;">
-        <p style="color: #999; font-size: 12px;">Generated: ${new Date(content.createdAt).toLocaleString()}</p>
+        <p style="color: #999; font-size: 12px;">Generated: ${new Date(content.createdAt).toLocaleString()} | AI Model: ${content.aiModel || 'unknown'}</p>
       `;
 
       document.body.appendChild(element);
@@ -201,6 +241,39 @@ export const ContentList: React.FC = () => {
                   Tone: <span className="font-semibold">{content.tone}</span>
                 </p>
 
+                {/* Quality Badge on Card */}
+                {content.qualityScore !== undefined && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                        content.qualityScore >= 80
+                          ? 'bg-green-100 text-green-800'
+                          : content.qualityScore >= 60
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-orange-100 text-orange-800'
+                      }`}
+                    >
+                      📊 {content.qualityScore}/100
+                    </span>
+                    {content.halluccinationRisk && (
+                      <span
+                        className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                          content.halluccinationRisk === 'high'
+                            ? 'bg-red-100 text-red-800'
+                            : content.halluccinationRisk === 'medium'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {content.halluccinationRisk === 'high' && '⚠️'}
+                        {content.halluccinationRisk === 'medium' && '⚡'}
+                        {content.halluccinationRisk === 'low' && '✓'}
+                        {content.halluccinationRisk === 'none' && '✅'} Risk
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-gray-700 text-sm line-clamp-3 mb-4">
                   {content.content}
                 </p>
@@ -237,56 +310,142 @@ export const ContentList: React.FC = () => {
       {/* Modal for full content view */}
       {selectedContent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto p-8">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{selectedContent.title}</h2>
                 <p className="text-gray-600 mt-2">{selectedContent.topic}</p>
               </div>
               <button
-                onClick={() => setSelectedContent(null)}
+                onClick={() => {
+                  setSelectedContent(null);
+                  setShowFactCheck(false);
+                }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 ×
               </button>
             </div>
 
-            <div className="flex gap-4 mb-6">
+            <div className="flex gap-4 mb-6 flex-wrap">
               <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
                 {selectedContent.contentType}
               </span>
               <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full">
                 {selectedContent.tone}
               </span>
+              {selectedContent.aiModel && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">
+                  🤖 {selectedContent.aiModel}
+                </span>
+              )}
             </div>
 
+            {/* Quality Badge in Modal */}
+            {selectedContent.qualityScore !== undefined && (
+              <div className="mb-6">
+                <QualityBadge
+                  score={selectedContent.qualityScore}
+                  halluccinationRisk={selectedContent.halluccinationRisk || 'none'}
+                  flaggedClaimsCount={selectedContent.flaggedClaims?.length || 0}
+                />
+              </div>
+            )}
+
+            {/* Fact-Check Button */}
+            {selectedContent.flaggedClaims && selectedContent.flaggedClaims.length > 0 && (
+              <button
+                onClick={() => setShowFactCheck(true)}
+                className="w-full mb-6 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+              >
+                🔍 View Fact-Check Details ({selectedContent.flaggedClaims.length} claims)
+              </button>
+            )}
+
+            {/* Quality Details Section */}
+            {selectedContent.qualityDetails && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">📊 Quality Metrics</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded border border-gray-200">
+                    <p className="text-xs text-gray-600">Word Count</p>
+                    <p className="text-lg font-bold text-blue-600">{selectedContent.qualityDetails.wordCount}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-gray-200">
+                    <p className="text-xs text-gray-600">Readability</p>
+                    <p className="text-lg font-bold text-green-600">
+                      {selectedContent.qualityDetails.readabilityScore.toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-gray-200">
+                    <p className="text-xs text-gray-600">Structure</p>
+                    <p className="text-lg font-bold text-purple-600">
+                      {selectedContent.qualityDetails.structureScore}/100
+                    </p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-gray-200">
+                    <p className="text-xs text-gray-600">Unique Words</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {selectedContent.qualityDetails.uniqueWordsRatio.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="prose max-w-none mb-6">
-              <div className="text-gray-700 whitespace-pre-wrap">
+              <div className="text-gray-700 whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
                 {selectedContent.content}
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3 flex-wrap">
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(selectedContent.content);
                   alert('Content copied to clipboard!');
                 }}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-semibold"
               >
-                Copy to Clipboard
+                📋 Copy to Clipboard
               </button>
+              <button
+  onClick={() => {
+    if (selectedContent) exportQualityReportPDF(selectedContent);
+  }}
+  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-sm font-semibold"
+>
+  📊 Quality Report
+</button>
               <button
                 onClick={() => {
                   exportToPDF(selectedContent);
                 }}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-semibold"
               >
-                Export as PDF
+                📄 Export as PDF
               </button>
               <button
-                onClick={() => setSelectedContent(null)}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 transition"
+  onClick={() => setShowRegenerate(true)}
+  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-semibold"
+>
+  🔄 Regenerate
+</button>
+
+              <button
+                onClick={() => {
+                  navigate(`/edit/${selectedContent._id}`);
+                }}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-semibold"
+              >
+                ✏️ Edit
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedContent(null);
+                  setShowFactCheck(false);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 transition text-sm font-semibold"
               >
                 Close
               </button>
@@ -294,6 +453,24 @@ export const ContentList: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Fact-Check Modal */}
+      <FactCheckModal
+        isOpen={showFactCheck}
+        onClose={() => setShowFactCheck(false)}
+        flaggedClaims={selectedContent?.flaggedClaims || []}
+        factCheckStatus={selectedContent?.factCheckStatus || 'verified'}
+      />
+      <RegenerateModal
+  isOpen={showRegenerate}
+  onClose={() => setShowRegenerate(false)}
+  contentId={selectedContent?._id || ''}
+  currentTone={selectedContent?.tone || ''}
+  onRegenerate={() => {
+    setShowRegenerate(false);
+    fetchContents();
+  }}
+/>
     </div>
   );
 };
